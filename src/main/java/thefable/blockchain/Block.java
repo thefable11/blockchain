@@ -1,21 +1,24 @@
 package thefable.blockchain;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Block {
-    private String data;
+    private List<Transaction> transactions;
     private long timestamp;
     private String previousHash;
     private String hash;
     private int nonce;
 
-    public Block(String data, String previousHash) {
-        this.data = data;
+    public Block(String previousHash) {
+        this.transactions = new ArrayList<>();
         this.previousHash = previousHash;
         this.timestamp = System.currentTimeMillis();
         this.hash = calculateHash();
     }
 
     public String calculateHash() {
-        return SHA256Util.hash(this.previousHash + this.timestamp + this.nonce + this.data);
+        return SHA256Util.hash(previousHash + timestamp + nonce + transactions.toString());
     }
 
     public void mineBlock(int difficulty) {
@@ -27,20 +30,32 @@ public class Block {
         }
     }
 
-    public String getData() {
-        return data;
+    public boolean addTransaction(Transaction transaction) {
+
+        if (transaction == null) return false;
+
+        // Skip validation for genesis block
+        if (!previousHash.equals("0")) {
+            if (!transaction.isValid()) {
+                System.out.println("Invalid transaction. Discarded.");
+                return false;
+            }
+        }
+
+        transactions.add(transaction);
+        return true;
     }
 
-    public void setData(String data) {
-        this.data = data;
+    public List<Transaction> getTransactions() {
+        return transactions;
+    }
+
+    public String getData() {
+        return transactions.toString();
     }
 
     public long getTimestamp() {
         return timestamp;
-    }
-
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
     }
 
     public String getPreviousHash() {

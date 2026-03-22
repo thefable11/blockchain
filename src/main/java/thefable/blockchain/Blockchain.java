@@ -1,26 +1,57 @@
 package thefable.blockchain;
 
+import java.security.PublicKey;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Blockchain {
     private List<Block> chain;
     private int difficulty;
+    private Map<PublicKey, Double> balances;
 
-    public Blockchain() {
+    public Blockchain(Wallet A, Wallet B) {
         chain = new ArrayList<>();
         difficulty = 5;
-        Block block = new Block("Genesis data", "0");
+        balances = new HashMap<>();
+        balances.put(A.getPublicKey(), 100.0);
+        balances.put(B.getPublicKey(), 100.0);
+        Block block = new Block("0");
         block.mineBlock(difficulty);
         chain.add(block);
     }
 
-    public void addBlock(String data) {
-        Block block = new Block(data, chain.get(chain.size()-1).getHash());
+    public void addBlock(Block block) {
+        // 1. Validate all transactions
+        for (Transaction tx : block.getTransactions()) {
+
+            if (!tx.isValid()) {
+                System.out.println("Invalid signature!");
+                return;
+            }
+
+            double senderBalance = getBalance(tx.getSender());
+
+            if (senderBalance < tx.getAmount()) {
+                System.out.println("Not enough balance!");
+                return;
+            }
+        }
+
         System.out.println("Mining...");
         block.mineBlock(difficulty);
         System.out.println("Block mined: " + block.getHash());
         chain.add(block);
+
+        for(Transaction tx : block.getTransactions()) {
+            PublicKey sender = tx.getSender();
+            PublicKey receiver = tx.getReceiver();
+            double amount = tx.getAmount();
+
+            balances.put(sender, getBalance(sender) - amount);
+            balances.put(receiver, getBalance(receiver) + amount);
+        }
     }
 
     public void validateChain() {
@@ -57,5 +88,19 @@ public class Blockchain {
             System.out.println("Previous Hash: \t" + chain.get(i).getPreviousHash());
             System.out.println("Data: \t" + chain.get(i).getData());
         }
+    }
+
+    public void printBalances() {
+        for(PublicKey key : balances.keySet()) {
+            System.out.println(key + " -> " + balances.get(key));
+        }
+    }
+
+    public double getBalance(PublicKey key) {
+        return balances.getOrDefault(key, 0.0);
+    }
+
+    public Block getLatestBlock() {
+        return chain.get(chain.size()-1);
     }
 }
